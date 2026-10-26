@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitoreo de redes · Presidencia de la República</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--red:#D91023;--red-d:#a80b1a;--ink:#1c1c1e;--mut:#6b6b70;--line:#e4e4e7;--bg:#f6f6f7;--pos:#2e9e5b;--neu:#f2b01e;--neg:#D91023}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Public Sans',system-ui,sans-serif;color:var(--ink);background:var(--bg);font-size:15px;line-height:1.5}
+header{background:#fff;border-top:6px solid var(--red);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header img{height:48px}
+header h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em}
+header p{margin:0;color:var(--mut);font-size:13px}
+.hd-r{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--mut)}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--red);color:#fff;border:0;border-radius:6px;padding:7px 14px;font-weight:600}
+.btn:hover{background:var(--red-d)}
+.bar{background:#fff;border-bottom:1px solid var(--line);padding:10px 24px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:5}
+.bar label{font-size:13px;color:var(--mut);display:flex;align-items:center;gap:6px}
+select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+nav{display:flex;gap:4px;padding:0 24px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{background:none;border:0;padding:12px 16px;font-weight:600;color:var(--mut);border-bottom:3px solid transparent;white-space:nowrap}
+nav button[aria-selected=true]{color:var(--red);border-bottom-color:var(--red)}
+main{padding:20px 24px;max-width:1280px;margin:0 auto}
+.panel{display:none}.panel.on{display:block}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));background:#fff;border:1px solid var(--line);border-radius:8px;margin-bottom:18px}
+.kpi{padding:16px 20px;border-left:1px solid var(--line)}
+.kpi:first-child{border-left:0}
+.kpi b{display:block;font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.kpi span{font-size:13px;color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px}
+.box{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+.box h2{margin:0 0 10px;font-size:16px;font-weight:600}
+.ch{position:relative;height:300px}
+.ins{margin:0;padding-left:18px}.ins li{margin:6px 0}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--mut);font-size:13px;white-space:nowrap}
+td.n,th.n{text-align:right;white-space:nowrap}
+a{color:var(--red);font-weight:600;text-decoration:none}a:hover{text-decoration:underline}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;color:#fff}
+.aviso{background:#fff4d6;border:1px solid #f2d37a;border-radius:6px;padding:8px 12px;margin-bottom:16px;font-size:13px}
+.vacio{padding:30px;text-align:center;color:var(--mut)}
+:focus-visible{outline:3px solid #111;outline-offset:2px}
+</style>
+</head>
+<body>
+<header>
+  <img src="presidencia.png" alt="Presidencia de la República" onerror="this.style.display='none'">
+  <div><h1>Monitoreo de redes</h1><p>Presidencia de la República del Perú · Facebook, Instagram y TikTok</p></div>
+  <div class="hd-r"><span id="estado"></span><button class="btn" id="recargar">Actualizar datos</button></div>
+</header>
+
+<div class="bar">
+  <label>Red <select id="fRed"></select></label>
+  <label>Mes <select id="fMes"></select></label>
+  <label>Cuenta <select id="fCuenta"></select></label>
+</div>
+
+<nav role="tablist">
+  <button role="tab" data-t="resumen" aria-selected="true">Resumen</button>
+  <button role="tab" data-t="redes" aria-selected="false">Por red</button>
+  <button role="tab" data-t="top" aria-selected="false">Top contenido</button>
+  <button role="tab" data-t="temas" aria-selected="false">Temas y tono</button>
+  <button role="tab" data-t="pubs" aria-selected="false">Publicaciones</button>
+</nav>
+
+<main>
+  <div id="aviso"></div>
+
+  <section class="panel on" id="p-resumen">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid">
+      <div class="box"><h2>Interacciones por mes</h2><div class="ch"><canvas id="cMes"></canvas></div></div>
+      <div class="box"><h2>Interacciones por red</h2><div class="ch"><canvas id="cRed"></canvas></div></div>
+    </div>
+    <div class="box"><h2>Hallazgos del periodo</h2><ul class="ins" id="ins"></ul></div>
+  </section>
+
+  <section class="panel" id="p-redes">
+    <div class="box" style="margin-bottom:18px"><h2>Comparativo entre redes</h2><div class="tw"><table id="tRedes"></table></div></div>
+    <div class="box"><h2>Interacciones promedio por tipo de contenido</h2><div class="ch"><canvas id="cTipo"></canvas></div></div>
+  </section>
+
+  <section class="panel" id="p-top">
+    <div class="box">
+      <h2>Las 10 publicaciones con más <select id="mTop">
+        <option value="v">vistas</option><option value="i" selected>interacciones</option>
+        <option value="c">comentarios</option><option value="s">compartidos</option><option value="l">me gusta</option>
+      </select></h2>
+      <div class="tw"><table id="tTop"></table></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-temas">
+    <div class="grid">
+      <div class="box"><h2>Interacciones por eje de gestión</h2><div class="ch" style="height:360px"><canvas id="cEje"></canvas></div></div>
+      <div class="box"><h2>Tono de las publicaciones por red</h2><div class="ch" style="height:360px"><canvas id="cTono"></canvas></div></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-pubs">
+    <div class="box"><h2>Todas las publicaciones <small style="color:var(--mut);font-weight:400">(más recientes primero, máx. 300)</small></h2><div class="tw"><table id="tPubs"></table></div></div>
+  </section>
+</main>
+
+<script>
+/* ============ CONFIGURACIÓN ============
+   1) En tu Google Sheet: Archivo → Compartir → Publicar en la web → hoja → formato CSV.
+   2) Pega aquí el enlace. Si lo dejas vacío, se muestran datos de ejemplo. */
+const CONFIG = { SHEET_CSV: "" };
+
+/* Columnas esperadas en la hoja (el orden no importa, sí los nombres):
+   FECHA | RED | CUENTA | TIPO DE CONTENIDO | TEXTO | EJE DE GESTIÓN | VISTAS | ME GUSTA | COMENTARIOS | COMPARTIDOS | GUARDADOS | TONO | LINK */
+
+const $ = s => document.querySelector(s);
+const NET = { Facebook:'#1877f2', Instagram:'#c13584', TikTok:'#1c1c1e' };
+const TONO = { Positivo:'#2e9e5b', Neutro:'#f2b01e', Negativo:'#D91023', 'Sin clasificar':'#c9c9cf' };
+const fmt = n => n>=1e6 ? (n/1e6).toFixed(1)+' M' : n>=1e4 ? Math.round(n/1e3)+' mil' : Math.round(n).toLocaleString('es-PE');
+const pct = n => (n*100).toFixed(1)+' %';
+const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sum = (a,k) => a.reduce((t,x)=>t+x[k],0);
+const grp = (a,f) => a.reduce((o,x)=>{(o[f(x)] ||= []).push(x);return o},{});
+const mesLbl = k => { const [y,m]=k.split('-'); return new Date(+y,m-1,1).toLocaleDateString('es-PE',{month:'short',year:'2-digit'}); };
+
+let DATA = [], CH = {}, TAB = 'resumen';
+
+/* ---------- Carga y limpieza ---------- */
+function parseCSV(t){
+  const r=[]; let row=[], c='', q=false;
+  for(let i=0;i<t.length;i++){
+    const ch=t[i];
+    if(q){ if(ch=='"'){ if(t[i+1]=='"'){c+='"';i++} else q=false } else c+=ch }
+    else if(ch=='"') q=true;
+    else if(ch==','){ row.push(c); c='' }
+    else if(ch=='\n'||ch=='\r'){ if(ch=='\r'&&t[i+1]=='\n') i++; row.push(c); r.push(row); row=[]; c='' }
+    else c+=ch;
+  }
+  if(c||row.length){ row.push(c); r.push(row) }
+  return r;
+}
+const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+const num = v => +String(v||'').replace(/[^\d.-]/g,'') || 0;
+function pd(s){
+  s=(s||'').trim(); let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m) return new Date(+m[3],m[2]-1,+m[1]);
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return new Date(+m[1],m[2]-1,+m[3]);
+  return null;
+}
+function normRed(s){ s=norm(s); return /FACE|FB/.test(s)?'Facebook':/INSTA|IG/.test(s)?'Instagram':/TIK/.test(s)?'TikTok':null }
+function normTono(s){ s=norm(s); return !s?'Sin clasificar':/^POS/.test(s)?'Positivo':/^NEG/.test(s)?'Negativo':'Neutro' }
+function build(rows){
+  const h = rows[0].map(norm), ix = (...n)=>{ for(const x of n){ const i=h.indexOf(norm(x)); if(i>-1) return i } return -1 };
+  const I = { f:ix('FECHA'), r:ix('RED'), a:ix('CUENTA'), t:ix('TIPO DE CONTENIDO','TIPO'), x:ix('TEXTO','DESCRIPCION'),
+    e:ix('EJE DE GESTION','EJE'), v:ix('VISTAS'), l:ix('ME GUSTA','LIKES'), c:ix('COMENTARIOS'), s:ix('COMPARTIDOS'),
+    g:ix('GUARDADOS'), o:ix('TONO'), k:ix('LINK') };
+  const get = (r,k) => I[k]>-1 ? r[I[k]] : '';
+  return rows.slice(1).map(r=>{
+    const d=pd(get(r,'f')), red=normRed(get(r,'r')); if(!d||!red) return null;
+    const o = { d, red, cuenta:get(r,'a')||'Cuenta oficial', tipo:get(r,'t')||'Sin tipo', texto:get(r,'x'),
+      eje:get(r,'e')||'Sin eje', v:num(get(r,'v')), l:num(get(r,'l')), c:num(get(r,'c')), s:num(get(r,'s')), g:num(get(r,'g')),
+      tono:normTono(get(r,'o')), link:(get(r,'k')||'').trim() };
+    o.i=o.l+o.c+o.s+o.g; o.mes=o.d.getFullYear()+'-'+String(o.d.getMonth()+1).padStart(2,'0');
+    return o;
+  }).filter(Boolean);
+}
+function ejemplo(){
+  let s=7; const R=()=>(s=(s*16807)%2147483647)/2147483647;
+  const ejes=['Economía y Finanzas','Salud','Educación','Ambiente','Transportes','Seguridad','Agricultura'];
+  const tipos=['Video','Foto','Carrusel','Reel'], tonos=['Positivo','Positivo','Neutro','Neutro','Negativo'];
+  const out=[];
+  for(let n=0;n<90;n++){
+    const red=['Facebook','Instagram','TikTok'][n%3], k=red=='TikTok'?3:red=='Instagram'?1.4:1;
+    const d=new Date(2026,5,1+Math.floor(R()*145)), v=Math.round((8e3+R()*9e4)*k);
+    const l=Math.round(v*(.02+R()*.05)), c=Math.round(l*(.05+R()*.2)), sh=Math.round(l*(.03+R()*.2)), g=Math.round(l*R()*.1);
+    out.push({d,red,cuenta:'Presidencia Perú',tipo:tipos[Math.floor(R()*4)],texto:'Publicación de ejemplo '+(n+1)+' sobre una actividad de gobierno',
+      eje:ejes[Math.floor(R()*ejes.length)],v,l,c,s:sh,g,tono:tonos[Math.floor(R()*5)],link:'',i:l+c+sh+g,
+      mes:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')});
+  }
+  return out;
+}
+async function cargar(){
+  const av=$('#aviso'); av.innerHTML='';
+  try{
+    if(!CONFIG.SHEET_CSV) throw new Error('vacío');
+    const res=await fetch(CONFIG.SHEET_CSV+(CONFIG.SHEET_CSV.includes('?')?'&':'?')+'t='+Date.now());
+    if(!res.ok) throw new Error(res.status);
+    DATA=build(parseCSV(await res.text()));
+    $('#estado').textContent=DATA.length+' publicaciones · '+new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){
+    DATA=ejemplo(); $('#estado').textContent='Datos de ejemplo';
+    av.innerHTML='<div class="aviso">'+(CONFIG.SHEET_CSV?'No se pudo leer la hoja ('+esc(e.message)+'). Revisa que esté publicada como CSV. ':'Estás viendo datos de ejemplo. ')+'Pega el enlace CSV de tu Google Sheet en <b>CONFIG.SHEET_CSV</b> para ver los datos reales.</div>';
+  }
+  opciones(); render();
+}
+
+/* ---------- Filtros ---------- */
+function opciones(){
+  const fill=(id,vals,lbl,fm)=>{ const el=$(id), cur=el.value; el.innerHTML='<option value="">'+lbl+'</option>'+vals.map(v=>'<option value="'+esc(v)+'">'+esc(fm?fm(v):v)+'</option>').join(''); el.value=vals.includes(cur)?cur:'' };
+  fill('#fRed',[...new Set(DATA.map(x=>x.red))].sort(),'Todas');
+  fill('#fMes',[...new Set(DATA.map(x=>x.mes))].sort(),'Todos los meses',mesLbl);
+  fill('#fCuenta',[...new Set(DATA.map(x=>x.cuenta))].sort(),'Todas');
+}
+const filtrado = () => DATA.filter(x=>(!$('#fRed').value||x.red==$('#fRed').value)&&(!$('#fMes').value||x.mes==$('#fMes').value)&&(!$('#fCuenta').value||x.cuenta==$('#fCuenta').value));
+
+/* ---------- Utilidades de tabla y gráficos ---------- */
+function mk(id,cfg){ if(CH[id]) CH[id].destroy(); CH[id]=new Chart($('#'+id),cfg) }
+Chart.defaults.font.family="'Public Sans',sans-serif"; Chart.defaults.maintainAspectRatio=false;
+const linkTd = u => /^https?:/i.test(u) ? '<a href="'+esc(u)+'" target="_blank" rel="noopener">Abrir</a>' : '—';
+const redTag = r => '<span class="tag" style="background:'+NET[r]+'">'+r+'</span>';
+const vacio = '<tbody><tr><td class="vacio">No hay publicaciones con estos filtros.</td></tr></tbody>';
+
+/* ---------- Vistas ---------- */
+function render(){
+  const f=filtrado(); ({resumen,redes,top,temas,pubs})[TAB](f);
+}
+function resumen(f){
+  const v=sum(f,'v'), i=sum(f,'i');
+  const k=[[f.length,'Publicaciones'],[fmt(v),'Vistas'],[fmt(i),'Interacciones'],[v?pct(i/v):'—','Tasa de interacción'],[fmt(sum(f,'s')),'Compartidos']];
+  $('#kpis').innerHTML=k.map(x=>'<div class="kpi"><b>'+x[0]+'</b><span>'+x[1]+'</span></div>').join('');
+  const meses=[...new Set(f.map(x=>x.mes))].sort(), redes=Object.keys(NET);
+  mk('cMes',{type:'line',data:{labels:meses.map(mesLbl),datasets:redes.map(r=>({label:r,borderColor:NET[r],backgroundColor:NET[r],tension:.3,
+    data:meses.map(m=>sum(f.filter(x=>x.red==r&&x.mes==m),'i'))}))},options:{plugins:{legend:{position:'bottom'}},scales:{y:{ticks:{callback:fmt}}}}});
+  mk('cRed',{type:'doughnut',data:{labels:redes,datasets:[{data:redes.map(r=>sum(f.filter(x=>x.red==r),'i')),backgroundColor:redes.map(r=>NET[r])}]},options:{plugins:{legend:{position:'bottom'}}}});
+  const L=[]; if(f.length){
+    const best=(key,fn)=>Object.entries(grp(f,key)).map(([n,a])=>[n,fn(a)]).sort((a,b)=>b[1]-a[1])[0];
+    const r=best(x=>x.red,a=>sum(a,'i')), t=best(x=>x.tipo,a=>sum(a,'i')/a.length), e=best(x=>x.eje,a=>sum(a,'i'));
+    const top=[...f].sort((a,b)=>b.v-a.v)[0], neg=f.filter(x=>x.tono=='Negativo').length;
+    L.push('<b>'+r[0]+'</b> concentra la mayor parte de las interacciones ('+fmt(r[1])+', '+pct(r[1]/i)+' del total).');
+    L.push('El formato <b>'+esc(t[0])+'</b> logra el mejor promedio: '+fmt(t[1])+' interacciones por publicación.');
+    L.push('El eje <b>'+esc(e[0])+'</b> es el que más conversación genera ('+fmt(e[1])+' interacciones).');
+    L.push('La publicación más vista alcanzó '+fmt(top.v)+' vistas en '+top.red+' ('+top.d.toLocaleDateString('es-PE')+').');
+    if(f.some(x=>x.tono!='Sin clasificar')) L.push(pct(neg/f.length)+' de las publicaciones tiene tono negativo.');
+  } else L.push('No hay publicaciones con estos filtros.');
+  $('#ins').innerHTML=L.map(x=>'<li>'+x+'</li>').join('');
+}
+function redes(f){
+  const head='<thead><tr><th>Red</th><th class="n">Publicaciones</th><th class="n">Vistas</th><th class="n">Me gusta</th><th class="n">Comentarios</th><th class="n">Compartidos</th><th class="n">Interacciones</th><th class="n">Prom. por publicación</th><th class="n">Tasa</th></tr></thead>';
+  const rows=Object.keys(NET).map(r=>{ const a=f.filter(x=>x.red==r), i=sum(a,'i'), v=sum(a,'v');
+    return '<tr><td>'+redTag(r)+'</td><td class="n">'+a.length+'</td><td class="n">'+fmt(v)+'</td><td class="n">'+fmt(sum(a,'l'))+'</td><td class="n">'+fmt(sum(a,'c'))+'</td><td class="n">'+fmt(sum(a,'s'))+'</td><td class="n">'+fmt(i)+'</td><td class="n">'+(a.length?fmt(i/a.length):'—')+'</td><td class="n">'+(v?pct(i/v):'—')+'</td></tr>' }).join('');
+  $('#tRedes').innerHTML=head+'<tbody>'+rows+'</tbody>';
+  const tipos=Object.entries(grp(f,x=>x.tipo)).map(([t,a])=>[t,sum(a,'i')/a.length]).sort((a,b)=>b[1]-a[1]);
+  mk('cTipo',{type:'bar',data:{labels:tipos.map(x=>x[0]),datasets:[{data:tipos.map(x=>Math.round(x[1])),backgroundColor:'#D91023'}]},options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:fmt}}}}});
+}
+function top(f){
+  const m=$('#mTop').value, a=[...f].sort((x,y)=>y[m]-x[m]).slice(0,10);
+  $('#tTop').innerHTML=a.length?'<thead><tr><th>#</th><th>Red</th><th>Fecha</th><th>Publicación</th><th class="n">'+$('#mTop').selectedOptions[0].text+'</th><th>Enlace</th></tr></thead><tbody>'+
+    a.map((x,n)=>'<tr><td>'+(n+1)+'</td><td>'+redTag(x.red)+'</td><td>'+x.d.toLocaleDateString('es-PE')+'</td><td>'+esc(x.texto.slice(0,140))+'</td><td class="n"><b>'+fmt(x[m])+'</b></td><td>'+linkTd(x.link)+'</td></tr>').join('')+'</tbody>':vacio;
+}
+function temas(f){
+  const ej=Object.entries(grp(f,x=>x.eje)).map(([e,a])=>[e,sum(a,'i')]).sort((a,b)=>b[1]-a[1]);
+  mk('cEje',{type:'bar',data:{labels:ej.map(x=>x[0]),datasets:[{data:ej.map(x=>x[1]),backgroundColor:'#D91023'}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:fmt}}}}});
+  const redes=Object.keys(NET);
+  mk('cTono',{type:'bar',data:{labels:redes,datasets:Object.keys(TONO).map(t=>({label:t,backgroundColor:TONO[t],data:redes.map(r=>f.filter(x=>x.red==r&&x.tono==t).length)}))},
+    options:{plugins:{legend:{position:'bottom'}},scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'Publicaciones'}}}}});
+}
+function pubs(f){
+  const a=[...f].sort((x,y)=>y.d-x.d).slice(0,300);
+  $('#tPubs').innerHTML=a.length?'<thead><tr><th>Fecha</th><th>Red</th><th>Tipo</th><th>Publicación</th><th>Eje</th><th class="n">Vistas</th><th class="n">Interac.</th><th>Tono</th><th>Enlace</th></tr></thead><tbody>'+
+    a.map(x=>'<tr><td>'+x.d.toLocaleDateString('es-PE')+'</td><td>'+redTag(x.red)+'</td><td>'+esc(x.tipo)+'</td><td>'+esc(x.texto.slice(0,110))+'</td><td>'+esc(x.eje)+'</td><td class="n">'+fmt(x.v)+'</td><td class="n">'+fmt(x.i)+'</td><td><span class="tag" style="background:'+TONO[x.tono]+(x.tono=='Neutro'?';color:#1c1c1e':'')+'">'+x.tono+'</span></td><td>'+linkTd(x.link)+'</td></tr>').join('')+'</tbody>':vacio;
+}
+
+/* ---------- Eventos ---------- */
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  TAB=b.dataset.t;
+  document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x==b));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id=='p-'+TAB));
+  render();
+});
+['#fRed','#fMes','#fCuenta','#mTop'].forEach(s=>$(s).onchange=render);
+$('#recargar').onclick=cargar;
+cargar();
+</script>
+</body>
+</html>
